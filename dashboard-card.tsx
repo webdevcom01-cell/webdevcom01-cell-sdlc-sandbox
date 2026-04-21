@@ -1,46 +1,48 @@
-import React, { ReactNode, KeyboardEvent, useRef, useState } from "react";
-import tokens from "./design-tokens";
+import React, { ReactNode, MouseEvent, KeyboardEvent, useRef } from "react";
+import { twMerge } from "tailwind-merge";
+import {
+  tokens,
+  cardVariants,
+  cardBorder,
+  cardBg,
+  cardShadow,
+  cardText,
+  cardFocusRing,
+  cardLoadingShimmer,
+  cardImageBg,
+} from "./design-tokens";
 
 /**
- * Material 3 Expressive DashboardCard component.
+ * Card variant options
+ */
+export type DashboardCardVariant = "elevated" | "filled" | "outlined";
+
+/**
+ * DashboardCard Props
  */
 export interface DashboardCardProps {
-  /**
-   * Main heading of the card.
-   */
+  /** Main heading of the card. */
   title: string;
-  /**
-   * Secondary text under the title.
-   */
+  /** Secondary text displayed below the title. */
   subtitle?: string;
-  /**
-   * Content to display inside the card.
-   */
+  /** Primary content area of the card. */
   content: ReactNode;
-  /**
-   * URL of the image to display at the top of the card.
-   */
+  /** URL of an optional image displayed at the top of the card. */
   imageUrl?: string;
-  /**
-   * Click handler for the card.
-   */
-  onClick?: () => void;
-  /**
-   * Visual style of the card.
-   * - `elevated`: shadowed surface
-   * - `filled`: filled surface
-   * - `outlined`: outlined surface
-   */
-  variant?: "elevated" | "filled" | "outlined";
-  /**
-   * Whether to show a loading state.
-   */
+  /** Callback for card click events. */
+  onClick?: (e: MouseEvent<HTMLDivElement>) => void;
+  /** Visual style of the card. */
+  variant?: DashboardCardVariant;
+  /** Whether the card is in a loading state. */
   loading?: boolean;
+  /** Whether the card is disabled. */
+  disabled?: boolean;
+  /** ARIA label for the card if interactive. */
+  "aria-label"?: string;
+  /** Custom id for aria-labelledby. */
+  id?: string;
 }
 
-/**
- * DashboardCard: Material 3 Expressive production-ready card for dashboard content.
- */
 export const DashboardCard: React.FC<DashboardCardProps> = ({
   title,
   subtitle,
@@ -49,209 +51,218 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({
   onClick,
   variant = "elevated",
   loading = false,
+  disabled = false,
+  "aria-label": ariaLabel,
+  id,
 }) => {
-  // State for focus-visible handling
-  const [focusVisible, setFocusVisible] = useState(false);
-  const [hovered, setHovered] = useState(false);
+  const interactive = Boolean(onClick) && !disabled;
+  const cardId = id || `dashboard-card-${Math.random().toString(36).slice(2)}`;
+  const cardTitleId = `${cardId}-title`;
+  const cardSubtitleId = `${cardId}-subtitle`;
+  const tabIndex = interactive ? 0 : undefined;
+  const ariaDisabled = disabled ? true : undefined;
+  const ariaBusy = loading ? true : undefined;
+  const hasSubtitle = typeof subtitle === "string" && subtitle.length > 0;
+  const ariaLabelledBy =
+    ariaLabel ||
+    (hasSubtitle
+      ? `${cardTitleId} ${cardSubtitleId}`
+      : cardTitleId);
+
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // Interactive & accessibility
-  const isInteractive = !!onClick;
-  const isDisabled = loading;
-
-  // IDs for aria-labeling
-  const titleId = `dashboard-card-title-${Math.random().toString(36).slice(2, 10)}`;
-  const subtitleId = `dashboard-card-subtitle-${Math.random().toString(36).slice(2, 10)}`;
-
-  // Variant classes
-  let baseBg = "bg-[var(--ds-surface)] dark:bg-[var(--ds-surface-dark)]";
-  let baseShadow = "shadow-none";
-  let baseBorder = "border-0";
-  let baseOutline = "";
-  if (variant === "elevated") {
-    baseBg = "bg-[var(--ds-surface)] dark:bg-[var(--ds-surface-dark)]";
-    baseShadow = "shadow-[var(--ds-elevation-1)] dark:shadow-[var(--ds-elevation-1-dark)]";
-    if (hovered && !isDisabled) baseShadow = "shadow-[var(--ds-elevation-2)] dark:shadow-[var(--ds-elevation-2-dark)]";
-    if (focusVisible) baseOutline = "ring-2 ring-[var(--ds-primary)] ring-offset-2";
-  } else if (variant === "filled") {
-    baseBg = "bg-[var(--ds-surface-variant)] dark:bg-[var(--ds-surface-variant-dark)]";
-    baseShadow = "shadow-none";
-    if (focusVisible) baseOutline = "ring-2 ring-[var(--ds-primary)] ring-offset-2";
-  } else if (variant === "outlined") {
-    baseBg = "bg-[var(--ds-surface)] dark:bg-[var(--ds-surface-dark)]";
-    baseBorder = "border border-[var(--ds-outline)] dark:border-[var(--ds-outline-dark)]";
-    if (focusVisible) baseBorder = "border-2 border-[var(--ds-primary)] dark:border-[var(--ds-primary-dark)]";
-  }
-
-  // Loading state
-  const loadingBg = "bg-[var(--ds-loading)] dark:bg-[var(--ds-loading-dark)]";
-  const opacity = loading ? "opacity-70" : "opacity-100";
-  const pointerClass = isInteractive && !isDisabled ? "cursor-pointer" : "cursor-default";
-  const disableEvents = isDisabled ? "pointer-events-none" : "";
-
-  // Focus styles (never outline-none)
-  const focusClasses =
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-primary)] focus-visible:ring-offset-2";
-
-  // Touch target
-  const touchTarget = "min-w-[44px] min-h-[44px]";
-
-  // Typography
-  const fontTitle = "font-semibold text-lg leading-tight truncate";
-  const fontSubtitle = "font-normal text-base opacity-70 leading-tight truncate";
-  const fontContent = "font-normal text-base leading-normal";
-
-  // Padding and radius
-  const padding = "px-[var(--ds-spacing-lg)] py-[var(--ds-spacing-lg)]";
-  const radius = "rounded-[var(--ds-radius)]";
-
-  // Responsive
-  const responsive = "sm:p-[var(--ds-spacing-lg)] md:p-[var(--ds-spacing-xl)]";
-
-  // Transition
-  const transition = "transition-[box-shadow,background,border,color] duration-[var(--ds-transition)] ease-[var(--ds-easing)]";
-
-  // Image
-  const imageRadius = "rounded-t-[var(--ds-radius)]";
-  const imageMargin = "mb-[var(--ds-spacing-md)]";
-  const imageClass = `w-full object-cover ${imageRadius} ${imageMargin} max-h-48 sm:max-h-56 md:max-h-64`;
-
-  // SKELETONS
-  const skeletonBase = "animate-pulse rounded bg-[var(--ds-loading)] dark:bg-[var(--ds-loading-dark)]";
-  const skeletonTitle = "w-32 h-5 mb-1 " + skeletonBase;
-  const skeletonSubtitle = "w-20 h-4 mb-2 " + skeletonBase;
-  const skeletonContent = "w-full h-12 mt-1 " + skeletonBase;
-
-  // ARIA
-  const ariaRole = isInteractive ? "button" : undefined;
-  const ariaLabelledBy = subtitle
-    ? `${titleId} ${subtitleId}`
-    : titleId;
-  const ariaDisabled = isDisabled ? true : undefined;
-  const ariaBusy = loading ? true : undefined;
-
-  // Keyboard handlers
+  // Keyboard accessibility: Enter/Space activate, Escape blur if interactive
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (!isInteractive || isDisabled) return;
+    if (!interactive) return;
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      onClick && onClick();
+      onClick && onClick((e as unknown) as MouseEvent<HTMLDivElement>);
     }
     if (e.key === "Escape") {
-      (e.currentTarget as HTMLElement).blur();
+      (e.target as HTMLDivElement).blur();
     }
   };
 
-  const handleFocus = (e: React.FocusEvent<HTMLDivElement>) => {
-    if (e.target === cardRef.current) setFocusVisible(true);
-  };
-  const handleBlur = () => setFocusVisible(false);
+  // Touch target enforcement
+  const touchTargetClass =
+    "min-h-[44px] min-w-[44px]";
 
-  // DESIGN TOKENS (CSS custom properties)
-  // These should be set at the application's root, but we set them here for demo completeness
-  // In production, these would be injected via the global CSS or with tailwind.config.js theme tokens
-  const vars = {
-    "--ds-surface": tokens.color.surface,
-    "--ds-surface-dark": tokens.color.surfaceDark,
-    "--ds-surface-variant": tokens.color.surfaceVariant,
-    "--ds-surface-variant-dark": tokens.color.surfaceVariantDark,
-    "--ds-outline": tokens.color.outline,
-    "--ds-outline-dark": tokens.color.outlineDark,
-    "--ds-primary": tokens.color.primary,
-    "--ds-primary-dark": tokens.color.primaryDark,
-    "--ds-loading": tokens.color.loading,
-    "--ds-loading-dark": tokens.color.loadingDark,
-    "--ds-elevation-1": tokens.shadow.elevated,
-    "--ds-elevation-1-dark": tokens.shadow.elevatedDark,
-    "--ds-elevation-2": tokens.shadow.hover,
-    "--ds-elevation-2-dark": tokens.shadow.hoverDark,
-    "--ds-spacing-lg": tokens.spacing.lg,
-    "--ds-spacing-xl": tokens.spacing.xl,
-    "--ds-radius": tokens.radius.lg,
-    "--ds-transition": tokens.transition.standard,
-    "--ds-easing": tokens.transition.easing,
-  } as React.CSSProperties;
+  // Card base
+  const cardBase = [
+    "relative",
+    "flex",
+    "flex-col",
+    "justify-start",
+    "w-full",
+    "rounded-[--card-radius]",
+    "overflow-hidden",
+    "transition-all",
+    "outline-none",
+    "focus-visible:[box-shadow:var(--card-focus-ring)]",
+    "focus-visible:z-10",
+    "select-none",
+    tokens.typography.fontFamily,
+    "group",
+    "bg-[--card-bg]",
+    "dark:bg-[--card-bg-dark]",
+    "border-[--card-border]",
+    "dark:border-[--card-border-dark]",
+    "shadow-[--card-shadow]",
+    "dark:shadow-[--card-shadow-dark]",
+    "p-[--card-padding]",
+    "dark:text-[--card-text]",
+    "cursor-pointer",
+    "disabled:cursor-not-allowed",
+    "aria-disabled:opacity-50",
+    "aria-disabled:pointer-events-none",
+    touchTargetClass,
+    "transition-[box-shadow,background-color,border-color] duration-[--card-transition]",
+  ];
+
+  // Non-interactive card
+  if (!interactive) {
+    cardBase.splice(cardBase.indexOf("cursor-pointer"), 1, "cursor-default");
+    cardBase.splice(cardBase.indexOf("focus-visible:[box-shadow:var(--card-focus-ring)]"), 1);
+  }
+
+  // Disabled card
+  if (disabled) {
+    cardBase.push("opacity-60", "pointer-events-none");
+  }
+
+  // Loading overlay
+  const shimmerOverlay =
+    "absolute inset-0 pointer-events-none z-20 overflow-hidden [border-radius:inherit]";
+
+  // Loading shimmer
+  const shimmerBar =
+    "absolute inset-0 animate-dashboard-card-shimmer bg-[--card-shimmer-gradient]";
+
+  // Responsive image container
+  const imageContainer =
+    "w-full h-[--card-image-height] bg-[--card-image-bg] dark:bg-[--card-image-bg-dark] flex-shrink-0 rounded-t-[--card-radius] overflow-hidden";
+
+  // Responsive content
+  const contentOpacity = loading ? "opacity-40" : "opacity-100";
+  const cardContent = [
+    "flex flex-col",
+    "w-full",
+    contentOpacity,
+    "transition-opacity duration-[--card-transition]",
+  ];
+
+  // Title
+  const titleClass =
+    "font-semibold text-xl leading-tight mb-1 text-[--card-title] dark:text-[--card-title-dark]";
+
+  // Subtitle
+  const subtitleClass =
+    "font-normal text-base leading-snug mb-4 text-[--card-subtitle] dark:text-[--card-subtitle-dark]";
+
+  // Content
+  const contentClass =
+    "font-normal text-base leading-relaxed text-[--card-content] dark:text-[--card-content-dark]";
+
+  // Variant CSS variables
+  const variantVars: Record<string, string> = {
+    "--card-radius": tokens.radius.xl,
+    "--card-padding": tokens.spacing.lg,
+    "--card-image-height": tokens.card.imageHeight,
+    "--card-transition": tokens.transitions.standard,
+    "--card-title": cardText[variant].title,
+    "--card-title-dark": cardText[variant].titleDark,
+    "--card-subtitle": cardText[variant].subtitle,
+    "--card-subtitle-dark": cardText[variant].subtitleDark,
+    "--card-content": cardText[variant].content,
+    "--card-content-dark": cardText[variant].contentDark,
+    "--card-text": cardText[variant].content,
+    "--card-bg": cardBg[variant].light,
+    "--card-bg-dark": cardBg[variant].dark,
+    "--card-border": cardBorder[variant].light,
+    "--card-border-dark": cardBorder[variant].dark,
+    "--card-shadow": cardShadow[variant].light,
+    "--card-shadow-dark": cardShadow[variant].dark,
+    "--card-focus-ring": cardFocusRing[variant].light,
+    "--card-image-bg": cardImageBg.light,
+    "--card-image-bg-dark": cardImageBg.dark,
+    "--card-shimmer-gradient": cardLoadingShimmer.gradient,
+  };
+
+  // Merge classNames
+  const cardClass = twMerge(cardBase);
 
   return (
     <div
       ref={cardRef}
-      tabIndex={isInteractive && !isDisabled ? 0 : undefined}
-      role={ariaRole}
-      aria-labelledby={ariaLabelledBy}
-      aria-disabled={ariaDisabled}
+      id={cardId}
+      role={interactive ? "button" : "region"}
+      tabIndex={tabIndex}
       aria-busy={ariaBusy}
-      aria-live={loading ? "polite" : undefined}
-      onClick={isInteractive && !isDisabled ? onClick : undefined}
-      onKeyDown={handleKeyDown}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className={[
-        "relative flex flex-col",
-        baseBg,
-        baseBorder,
-        baseShadow,
-        baseOutline,
-        opacity,
-        pointerClass,
-        disableEvents,
-        padding,
-        responsive,
-        radius,
-        transition,
-        focusClasses,
-        touchTarget,
-        "gap-[var(--ds-spacing-md)]",
-        "font-sans",
-        "select-none",
-        "outline-none",
-        "w-full",
-        "min-w-0",
-        "min-h-0",
-      ].join(" ")}
-      style={vars}
+      aria-disabled={ariaDisabled}
+      aria-label={ariaLabel ? ariaLabel : undefined}
+      aria-labelledby={!ariaLabel ? ariaLabelledBy : undefined}
+      className={cardClass}
+      onClick={interactive && !loading ? onClick : undefined}
+      onKeyDown={interactive && !loading ? handleKeyDown : undefined}
+      style={variantVars}
       data-variant={variant}
-      data-state={loading ? "loading" : focusVisible ? "focus" : hovered ? "hover" : "default"}
+      data-loading={loading ? "true" : undefined}
+      data-disabled={disabled ? "true" : undefined}
     >
       {imageUrl && !loading && (
-        <img
-          src={imageUrl}
-          alt=""
-          className={imageClass}
-          draggable={false}
-        />
+        <div className={imageContainer}>
+          <img
+            src={imageUrl}
+            alt=""
+            className="object-cover w-full h-full"
+            draggable={false}
+          />
+        </div>
       )}
 
-      <div className="flex flex-col gap-[var(--ds-spacing-xs)]">
+      <div className={cardContent.join(" ")}>
         <div
-          id={titleId}
-          className={fontTitle + " text-[var(--ds-on-surface)] dark:text-[var(--ds-on-surface-dark)]"}
+          id={cardTitleId}
+          className={titleClass}
         >
-          {loading ? <span className={skeletonTitle} /> : title}
+          {title}
         </div>
-        {subtitle && (
+        {hasSubtitle && (
           <div
-            id={subtitleId}
-            className={fontSubtitle + " text-[var(--ds-on-surface)] dark:text-[var(--ds-on-surface-dark)]"}
+            id={cardSubtitleId}
+            className={subtitleClass}
           >
-            {loading ? <span className={skeletonSubtitle} /> : subtitle}
+            {subtitle}
           </div>
         )}
+        <div className={contentClass} aria-live="polite">
+          {content}
+        </div>
       </div>
-      <div
-        className={fontContent + " text-[var(--ds-on-surface)] dark:text-[var(--ds-on-surface-dark)] flex-1"}
-      >
-        {loading ? <span className={skeletonContent} /> : content}
-      </div>
-      {/* Focus ring (visible only if focusVisible) */}
-      <span
-        aria-hidden="true"
-        className={[
-          "pointer-events-none absolute inset-0 rounded-[var(--ds-radius)] transition-[box-shadow] duration-[var(--ds-transition)]",
-          focusVisible ? "ring-2 ring-[var(--ds-primary)] ring-offset-2" : "",
-        ].join(" ")}
-      />
+
+      {loading && (
+        <div
+          className={shimmerOverlay}
+          aria-label="Loading"
+          aria-live="polite"
+        >
+          <div className={shimmerBar}></div>
+        </div>
+      )}
+
+      <style>
+        {`
+          @keyframes dashboard-card-shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+          }
+          .animate-dashboard-card-shimmer {
+            background: var(--card-shimmer-gradient);
+            background-size: 200% 100%;
+            animation: dashboard-card-shimmer 1.2s linear infinite;
+          }
+        `}
+      </style>
     </div>
   );
 };
