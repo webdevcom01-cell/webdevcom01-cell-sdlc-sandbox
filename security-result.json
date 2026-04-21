@@ -1,1 +1,1 @@
-{"status":"PASS","severity":"NONE","findings":[],"summary":"No security issues detected."}
+{"status":"PASS","severity":"MEDIUM","findings":[{"issue":"Insecure randomness: Math.random() used for generating DOM id (ariaLabelledById), which is not a security/crypto use. This is not a security risk in this context, just informational.","severity":"MEDIUM"}],"summary":"No exploitable vulnerabilities detected. Math.random() is used for a DOM id, which is not a security risk."}
